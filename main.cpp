@@ -44,11 +44,11 @@ bool Preprocess(const path& in_file, const path& out_file, const vector<path>& i
         if (regex_match(str, m, regex1)) {
             path source = string(m[1]);
             path p = in_file.parent_path() / source;
-            ifstream reader_file;
-            reader_file.open(p);
-            if (reader_file.is_open()) {
+            ifstream current_file;
+            current_file.open(p);
+            if (current_file.is_open()) {
                 Preprocess(p, out_file, include_directories);
-                reader_file.close();
+                current_file.close();
             }
             else {
                 bool found = FindIncludeFile(source, line, in_file, out_file, include_directories);
