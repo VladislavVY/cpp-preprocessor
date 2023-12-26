@@ -14,8 +14,63 @@ path operator""_p(const char* data, std::size_t sz) {
     return path(data, data + sz);
 }
 
-// напишите эту функцию
 bool Preprocess(const path& in_file, const path& out_file, const vector<path>& include_directories);
+
+bool FindIncludeFile(const path& source, size_t line, const path& in_file, const path& out_file, const vector<path>& include_directories) {
+    bool found = false;
+    for (const auto& file : include_directories) {
+        if (exists(path(file / source))) {  
+            Preprocess(file / source, out_file, include_directories);
+            found = true;
+            break;
+        }
+    }
+    if (found == false) {
+        cout << "unknown include file "s << source.string() << " at file "s << in_file.string() << " at line "s << line << endl;
+    }
+    return found;
+}
+
+bool Preprocess(const path& in_file, const path& out_file, const vector<path>& include_directories){
+    static regex regex1(R"/(\s*#\s*include\s*"([^"]*)"\s*)/");
+    static regex regex2(R"/(\s*#\s*include\s*<([^>]*)>\s*)/");
+    ifstream fin(in_file);
+    ofstream fout(out_file, ios::out | ios::app);
+    string str;
+    smatch m;
+    int line = 0;
+    while (getline(fin, str)) {
+        ++line;
+        if (regex_match(str, m, regex1)) {
+            path source = string(m[1]);
+            path p = in_file.parent_path() / source;
+            ifstream reader_file;
+            reader_file.open(p);
+            if (reader_file.is_open()) {
+                Preprocess(p, out_file, include_directories);
+                reader_file.close();
+            }
+            else {
+                bool found = FindIncludeFile(source, line, in_file, out_file, include_directories);
+                if (found == false){
+                return false;
+                }
+            }
+        }
+        else if (regex_match(str, m, regex2)) {
+            path source = string(m[1]);
+            bool found = FindIncludeFile(source, line, in_file, out_file, include_directories);
+             if (found == false){
+                return false;
+                }
+        }
+        else {
+            fout << str << endl;
+        }
+    }
+    return true;
+}
+    
 
 string GetFileContents(string file) {
     ifstream stream(file);
